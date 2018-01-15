@@ -178,10 +178,6 @@ int main(int argc, char *argv[]) {
             num_inst_set = 1;
         } else if(strcmp(argv[count], "-p") == 0) {
             pipe_dump_set = 1;
-        } else if(strcmp(argv[count], "-nobp") == 0) {
-            BR_BIT = FALSE;
-        } else if(strcmp(argv[count], "-nof") == 0) {
-            FORWARDING_BIT = FALSE;
         } else if(strcmp(argv[count], "-mc") == 0) {
             cacheMissPenalty = atoi(argv[++count]);
         } else if(strcmp(argv[count], "-c")==0) {
