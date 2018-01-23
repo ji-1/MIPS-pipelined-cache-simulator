@@ -39,39 +39,39 @@
 
 /* You may add pipeline registers that you require */
 typedef struct CPU_State_Struct {
-	uint32_t PC;			/* program counter for the IF stage*/
-	uint32_t REGS[MIPS_REGS];	/* register file */
-	uint32_t REGS_LOCK[MIPS_REGS];	/* register lock to support stalls 
+    uint32_t PC;			/* program counter for the IF stage*/
+    uint32_t REGS[MIPS_REGS];	/* register file */
+    uint32_t REGS_LOCK[MIPS_REGS];	/* register lock to support stalls 
 					   Lock registers when data is not ready*/
-	
-	uint32_t PIPE[PIPE_STAGE];	/* PC being executed at each stage*/
-	uint32_t PIPE_STALL[PIPE_STAGE];
-	
-	//IF_ID_latch
-	uint32_t IF_ID_INST;
-	uint32_t IF_ID_NPC;
 
-	//ID_EX_latch
-	uint32_t ID_EX_NPC;
-	uint32_t ID_EX_REG1;
-	uint32_t ID_EX_REG2;
-	short ID_EX_IMM;
-	unsigned char ID_EX_DEST;
+    uint32_t PIPE[PIPE_STAGE];	/* PC being executed at each stage*/
+    uint32_t PIPE_STALL[PIPE_STAGE];
 
-	//EX_MEM_latch
-	uint32_t EX_MEM_NPC;
-	uint32_t EX_MEM_ALU_OUT;
-	uint32_t EX_MEM_W_VALUE;
-	uint32_t EX_MEM_BR_TARGET;
-	uint32_t EX_MEM_BR_TAKE;
-	unsigned char EX_MEM_DEST;
+    //IF_ID_latch
+    uint32_t IF_ID_INST;
+    uint32_t IF_ID_NPC;
 
-	//MEM_WB_latch
-	uint32_t MEM_WB_NPC;
-	uint32_t MEM_WB_ALU_OUT;
-	uint32_t MEM_WB_MEM_OUT;
-	uint32_t MEM_WB_BR_TAKE;
-	unsigned char MEM_WB_DEST;
+    //ID_EX_latch
+    uint32_t ID_EX_NPC;
+    uint32_t ID_EX_REG1;
+    uint32_t ID_EX_REG2;
+    short ID_EX_IMM;
+    unsigned char ID_EX_DEST;
+
+    //EX_MEM_latch
+    uint32_t EX_MEM_NPC;
+    uint32_t EX_MEM_ALU_OUT;
+    uint32_t EX_MEM_W_VALUE;
+    uint32_t EX_MEM_BR_TARGET;
+    uint32_t EX_MEM_BR_TAKE;
+    unsigned char EX_MEM_DEST;
+
+    //MEM_WB_latch
+    uint32_t MEM_WB_NPC;
+    uint32_t MEM_WB_ALU_OUT;
+    uint32_t MEM_WB_MEM_OUT;
+    uint32_t MEM_WB_BR_TAKE;
+    unsigned char MEM_WB_DEST;
 
     //MEM_STATE
     int STALL_FOR_DCACHE;
@@ -81,16 +81,16 @@ typedef struct CPU_State_Struct {
     uint32_t MEM_STALL_W_VALUE;
     unsigned char MEM_STALL_DEST;
 
-	//Forwarding
-	unsigned char EX_MEM_FORWARD_REG;
-	unsigned char MEM_WB_FORWARD_REG;
-	uint32_t EX_MEM_FORWARD_VALUE;
-	uint32_t MEM_WB_FORWARD_VALUE;
+    //Forwarding
+    unsigned char EX_MEM_FORWARD_REG;
+    unsigned char MEM_WB_FORWARD_REG;
+    uint32_t EX_MEM_FORWARD_VALUE;
+    uint32_t MEM_WB_FORWARD_VALUE;
 
-	//To choose right PC
-	uint32_t IF_PC;
-	uint32_t JUMP_PC;
-	uint32_t BRANCH_PC;
+    //To choose right PC
+    uint32_t IF_PC;
+    uint32_t JUMP_PC;
+    uint32_t BRANCH_PC;
 } CPU_State;
 
 typedef struct inst_s {
@@ -100,26 +100,26 @@ typedef struct inst_s {
     short func_code;
 
     union {
-        /* R-type or I-type: */
-        struct {
+	/* R-type or I-type: */
+	struct {
 	    unsigned char rs;
 	    unsigned char rt;
 
 	    union {
-	        short imm;
+		short imm;
 
-	        struct {
+		struct {
 		    unsigned char rd;
 		    unsigned char shamt;
 		} r;
 	    } r_i;
 	} r_i;
-        /* J-type: */
-        uint32_t target;
+	/* J-type: */
+	uint32_t target;
     } r_t;
 
     uint32_t value;
-    
+
     //int32 encoding;
     //imm_expr *expr;
     //char *source_line;
