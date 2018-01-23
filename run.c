@@ -557,7 +557,8 @@ void Memory_Stage() {
             if (FORWARDING_BIT == TRUE) {
                 CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
             }
-            CURRENT_STATE.MEM_WB_MEM_OUT = mem_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
+	    
+            CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
             break;
         case 0x2b:		//SW
