@@ -22,7 +22,7 @@ typedef struct Cache_Block_Info {
 } Block_Info;
 
 
-typedef struct Cache_Info2 {
+typedef struct Cache_Info {
     Block_Info* block;
 } Cache_Info_Set;
 

@@ -116,10 +116,17 @@ instruction*	get_inst_info(uint32_t pc);
 void		process_instruction();
 
 /* Add any functions declarations that you require */
-/* Suggestions for some possible functions */
-//void		IF_Stage();
-//void		ID_Stage();
-//void		EX_Stage();
-//void		MEM_Stage();
-//void		WB_Stage();
+void            IFetch_Stage();
+void            IDecode_Stage();
+void            Execute_Stage();
+void            Memory_Stage();
+void            WriteBack_Stage();
+void            Choose_PC();
+
+void            Flush_By_Jump();
+void            Flush_By_Branch_EX();
+void            Flush_By_Branch_MEM();
+void            Flush_By_Branch();
+
+
 #endif

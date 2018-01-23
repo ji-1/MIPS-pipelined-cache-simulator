@@ -76,12 +76,13 @@ void setupCacheInfo(int capacity, int num_way, int block_size)
     Cache_Info = (Cache_Info_Set *)malloc(nset*sizeof(Cache_Info_Set*)); 
 
     for (i=0;i<nset;i++) {
-	Cache_Info[i] = (Block_Info *)malloc(num_way*sizeof(Block_Info*));
+	Cache_Info[i].block = (Block_Info *)malloc(num_way*sizeof(Block_Info*));
+
     }
 
     for(i=0;i<nset;i++) {
 	for (j=0;j<num_way;j++) {
-	    Cache_Info[i][j]->valid=0;
+	    (Cache_Info[i].block[j]).valid=0;
 	}
     }
 }
