@@ -63,3 +63,32 @@ void setCacheMissPenalty(int penalty_cycles)
 }
 
 /* Please declare and implement additional functions for your cache */
+void setupCacheInfo(int capacity, int num_way, int block_size)
+{
+    /*	code for initializing and setting up your cache	*/
+    /*	You may add additional code if you need to	*/
+
+    int i,j; //counter
+    int nset=0; // number of sets
+    int _wpb=0; //words per block   
+    nset=capacity/(block_size*num_way);
+    _wpb = block_size/BYTES_PER_WORD;
+    Cache_Info = (Cache_Info_Set *)malloc(nset*sizeof(Cache_Info_Set*)); 
+
+    for (i=0;i<nset;i++) {
+	Cache_Info[i] = (Block_Info *)malloc(num_way*sizeof(Block_Info*));
+    }
+
+    for(i=0;i<nset;i++) {
+	for (j=0;j<num_way;j++) {
+	    Cache_Info[i][j]->valid=0;
+	}
+    }
+}
+uint32_t cache_read_32(uint32_t address) {
+
+
+}
+void cache_write_32(uint32_t address, uint32_t value) {
+
+}
