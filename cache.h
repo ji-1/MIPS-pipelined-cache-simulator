@@ -7,7 +7,6 @@
 /*   Adapted from CS311@KAIST                                  */
 /*                                                             */
 /***************************************************************/
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>

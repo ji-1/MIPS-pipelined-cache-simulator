@@ -8,7 +8,7 @@
 /*                                                             */
 /***************************************************************/
 
-#include "cache.h"
+//#include "cache.h"
 #include "util.h"
 
 /* cache.c : Implement your functions declared in cache.h */
@@ -86,14 +86,22 @@ uint32_t cache_read_32(uint32_t address)
     uint32_t tag = address>>4;
     uint32_t offset = address&0x7;
 
-    for (i=0;i<4;i++) {
-	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
+    for (i=0;i<4;i++)
+	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag))
 	    return Cache[set_index][i][offset/BYTES_PER_WORD];
-	}	
-    }
+    return NULL;
+}
+
+uint32_t cache_miss_mem_read_32(uint32_t address) 
+{    
+    int i;
+    uint32_t set_index = (address>>3)&0x1;
+    uint32_t tag = address>>4;
+    uint32_t offset = address&0x7;
 
     for (i=0;i<4;i++){
 	if (!Cache_Info[set_index].block[i].valid) {
+	    CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
 	    mem_read_block(address, Cache[set_index][i]); 
 	    (&(&Cache_Info[set_index])->block[i])->valid=1;
 	    (&(&Cache_Info[set_index])->block[i])->tag=tag;
