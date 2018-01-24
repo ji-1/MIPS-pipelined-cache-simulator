@@ -251,12 +251,11 @@ void Execute_Stage() {
         CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
     } else if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==FALSE) {
         CURRENT_STATE.PIPE[EX_STAGE] = 0;
-    } else {
-	//memory stall
-	CURRENT_STATE.PIPE[EX_STAGE]=CURRENT_STATE.PIPE[ID_STAGE];
+    } 
+
+    if (CURRENT_STATE.PIPE_STALL[EX_STAGE] == TRUE) {
 	return;
     }
-
     if (CURRENT_STATE.PIPE[EX_STAGE] == 0) {
         CURRENT_STATE.EX_MEM_DEST = 0;
         CURRENT_STATE.EX_MEM_ALU_OUT = 0;
@@ -570,7 +569,7 @@ void Memory_Stage() {
 	    
             CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
 	    if (CURRENT_STATE.MEM_WB_MEM_OUT==NULL) {
-		CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;
+		CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
 		return;
 	    }
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
@@ -630,7 +629,6 @@ void WriteBack_Stage() {
     CURRENT_STATE.PIPE[WB_STAGE] = CURRENT_STATE.PIPE[MEM_STAGE];
     } else {
 	CURRENT_STATE.PIPE[WB_STAGE]=0;
-	printf("wb stall...요기\n");
     }
     if (CURRENT_STATE.PIPE[WB_STAGE] == 0) {
         return;
@@ -802,8 +800,7 @@ void Flush_By_Branch() {
 
 void Stall_By_Cache_Miss(int* penalty) {
     
-    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
-//	printf("penalty~~~~~~~~~%d\n",*penalty);
+    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
 	if (!((*penalty)--)) {
 	    CURRENT_STATE.PIPE_STALL[IF_STAGE]=FALSE;
 	    CURRENT_STATE.PIPE_STALL[ID_STAGE]=FALSE;
@@ -815,6 +812,7 @@ void Stall_By_Cache_Miss(int* penalty) {
 	CURRENT_STATE.PIPE_STALL[IF_STAGE]=TRUE;
 	CURRENT_STATE.PIPE_STALL[ID_STAGE]=TRUE;
 	CURRENT_STATE.PIPE_STALL[EX_STAGE]=TRUE;
+	CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;
     }
 }
 

@@ -101,7 +101,6 @@ uint32_t cache_miss_mem_read_32(uint32_t address)
 
     for (i=0;i<4;i++){
 	if (!Cache_Info[set_index].block[i].valid) {
-	    CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
 	    mem_read_block(address, Cache[set_index][i]); 
 	    (&(&Cache_Info[set_index])->block[i])->valid=1;
 	    (&(&Cache_Info[set_index])->block[i])->tag=tag;
