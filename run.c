@@ -128,7 +128,7 @@ void IDecode_Stage() {
                 case 0x2B:	//SLTU
                 case 0x23:	//SUBU
                     if (CURRENT_STATE.REGS_LOCK[RS(inst)] || CURRENT_STATE.REGS_LOCK[RT(inst)]) {
-			printf("addu lock?\n");
+			//printf("addu lock?\n");
                         CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
                         return;
                     }
@@ -250,10 +250,14 @@ void IDecode_Stage() {
 /***************************************************************/
 void Execute_Stage() {
     instruction *inst;
+
+//    printf("IF STALL: %d MEM STALL: %d \n", CURRENT_STATE.PIPE_STALL[IF_STAGE], CURRENT_STATE.PIPE_STALL[MEM_STAGE]);
+
     if (CURRENT_STATE.PIPE_STALL[ID_STAGE] == FALSE) {
-        CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
-    } else if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==FALSE) {
-	printf("0 으로!?\n");
+	CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
+    }
+    
+    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE] == FALSE && CURRENT_STATE.PIPE_STALL[IF_STAGE] == TRUE) {	
         CURRENT_STATE.PIPE[EX_STAGE] = 0;
     } 
 
@@ -422,7 +426,7 @@ void Execute_Stage() {
             }
         case 0x23:		//LW	
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    printf("EX stage:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
+	    //printf("EX stage:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
             break;
         case 0x2b:		//SW
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
@@ -538,7 +542,6 @@ void Memory_Stage() {
     instruction *inst;
 
     if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
-//	CURRENT_STATE.PIPE[MEM_STAGE]=CURRENT_STA
 	return;
     }
     if (FORWARDING_BIT == TRUE) {
@@ -571,12 +574,13 @@ void Memory_Stage() {
             if (FORWARDING_BIT == TRUE) {
                 CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
             }
-	    
+    
             CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
-	    printf("cache_read output: %d\n",CURRENT_STATE.MEM_WB_MEM_OUT);
-	    if (CURRENT_STATE.MEM_WB_MEM_OUT==NULL) {
-		CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
-		CURRENT_STATE.MEM_STALL_PC=CURRENT_STATE.EX_MEM_ALU_OUT;
+	    //printf("cache_read output: %d\n", CURRENT_STATE.MEM_WB_MEM_OUT);
+	    
+	    if (CURRENT_STATE.MEM_WB_MEM_OUT == 0) {
+		CURRENT_STATE.STALL_FOR_DCACHE = TRUE;
+		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
 		break;
 	    }
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
@@ -809,20 +813,24 @@ void Stall_By_Cache_Miss(int* penalty) {
     
     if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
 	if (!((*penalty)--)) {
-	    CURRENT_STATE.PIPE_STALL[IF_STAGE]=FALSE;
-	    CURRENT_STATE.PIPE_STALL[ID_STAGE]=FALSE;
-	    CURRENT_STATE.PIPE_STALL[EX_STAGE]=FALSE;
-	    CURRENT_STATE.PIPE_STALL[MEM_STAGE]=FALSE;
-	    CURRENT_STATE.MEM_WB_ALU_OUT=cache_miss_mem_read_32()&0xfffffff;
-	    printf("cache_miss: %d\n",CURRENT_STATE.MEM_WB_ALU_OUT);
+	    CURRENT_STATE.PIPE_STALL[IF_STAGE] = FALSE;
+	    CURRENT_STATE.PIPE_STALL[ID_STAGE] = FALSE;
+	    CURRENT_STATE.PIPE_STALL[EX_STAGE] = FALSE;
+	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
+
+	    CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+	    
+	    //printf("cache_miss: %d\n", CURRENT_STATE.MEM_WB_MEM_OUT);
+	    
 	    *penalty=30;
-	    CURRENT_STATE.STALL_FOR_DCACHE=FALSE;
+	    
+	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
 	    return;
 	}
-	CURRENT_STATE.PIPE_STALL[IF_STAGE]=TRUE;
-	CURRENT_STATE.PIPE_STALL[ID_STAGE]=TRUE;
-	CURRENT_STATE.PIPE_STALL[EX_STAGE]=TRUE;
-	CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;
+	CURRENT_STATE.PIPE_STALL[IF_STAGE] = TRUE;
+	CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
+	CURRENT_STATE.PIPE_STALL[EX_STAGE] = TRUE;
+	CURRENT_STATE.PIPE_STALL[MEM_STAGE] = TRUE;
     }
 }
 
