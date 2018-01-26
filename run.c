@@ -45,6 +45,7 @@ void IFetch_Stage() {
         CURRENT_STATE.PIPE[IF_STAGE] = CURRENT_STATE.PC;
         CURRENT_STATE.IF_PC = CURRENT_STATE.PC + BYTES_PER_WORD;
     } else {
+	// IF stall
         CURRENT_STATE.IF_PC = CURRENT_STATE.PC;
     }
 
@@ -59,6 +60,7 @@ void IFetch_Stage() {
     } else { /** ID Stage is stalled */
         CURRENT_STATE.PIPE_STALL[IF_STAGE] = TRUE;
         CURRENT_STATE.IF_PC = CURRENT_STATE.PC;
+	CURRENT_STATE.PIPE_STALL[ID_STAGE] = FALSE;
     }
 }
 
@@ -71,13 +73,12 @@ void IFetch_Stage() {
 /***************************************************************/
 void IDecode_Stage() {
     instruction *inst;
-    printf("id stage first. reg1: %x\n",CURRENT_STATE.ID_EX_REG1);
 
     if (!(FETCH_BIT == FALSE && CURRENT_STATE.PIPE_STALL[ID_STAGE] == TRUE)) {
 	if (CURRENT_STATE.PIPE_STALL[ID_STAGE]==TRUE) {
 	    return;
 	}
-        CURRENT_STATE.PIPE[ID_STAGE] = CURRENT_STATE.IF_ID_INST;
+	CURRENT_STATE.PIPE[ID_STAGE] = CURRENT_STATE.IF_ID_INST;
     }
    
     if (CURRENT_STATE.PIPE[ID_STAGE] == 0) {
@@ -127,6 +128,7 @@ void IDecode_Stage() {
                 case 0x2B:	//SLTU
                 case 0x23:	//SUBU
                     if (CURRENT_STATE.REGS_LOCK[RS(inst)] || CURRENT_STATE.REGS_LOCK[RT(inst)]) {
+			printf("addu lock?\n");
                         CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
                         return;
                     }
@@ -178,7 +180,6 @@ void IDecode_Stage() {
             case 0x23:		//LW
                 CURRENT_STATE.REGS_LOCK[RT(inst)]++;			//Lock dest register
                 CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.REGS[BASE(inst)];
-		printf("id stage reg1 %x\n",CURRENT_STATE.ID_EX_REG1);
                 CURRENT_STATE.ID_EX_IMM = IOFFSET(inst);
                 CURRENT_STATE.ID_EX_DEST = RT(inst);
             case 0x2b:		//SW
@@ -249,10 +250,10 @@ void IDecode_Stage() {
 /***************************************************************/
 void Execute_Stage() {
     instruction *inst;
-		    printf("ex stage first.. %x\n",CURRENT_STATE.ID_EX_REG1);
     if (CURRENT_STATE.PIPE_STALL[ID_STAGE] == FALSE) {
         CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
     } else if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==FALSE) {
+	printf("0 으로!?\n");
         CURRENT_STATE.PIPE[EX_STAGE] = 0;
     } 
 
@@ -291,11 +292,9 @@ void Execute_Stage() {
             case 0x23:		//LW
                 if (BASE(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
                     CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.MEM_WB_FORWARD_VALUE;
-		    printf("lw mem_Wb forward.. %x\n",CURRENT_STATE.ID_EX_REG1);
                 }
                 if (BASE(inst) == CURRENT_STATE.EX_MEM_FORWARD_REG) {
                     CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.EX_MEM_FORWARD_VALUE;
-		    printf("ex mem_Wb forward.. %x\n",CURRENT_STATE.ID_EX_REG1);
                 }
             case 0x2b:		//SW
                 if (BASE(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
@@ -423,7 +422,7 @@ void Execute_Stage() {
             }
         case 0x23:		//LW	
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    printf("ex_mem_alu_out 전에 나오는거..id_Ex_reg1 ... ex stage. %x %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
+	    printf("EX stage:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
             break;
         case 0x2b:		//SW
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
@@ -547,7 +546,7 @@ void Memory_Stage() {
         CURRENT_STATE.MEM_WB_FORWARD_VALUE = CURRENT_STATE.MEM_WB_ALU_OUT;
 
         //for debug
-        //printf("Mem Forward/ REG: %d, VALUE: %d\n", CURRENT_STATE.MEM_WB_FORWARD_REG, CURRENT_STATE.MEM_WB_FORWARD_VALUE);
+//        printf("Mem Forward/ REG: %d, VALUE: %x\n", CURRENT_STATE.MEM_WB_FORWARD_REG, CURRENT_STATE.MEM_WB_FORWARD_VALUE);
     }
 
     CURRENT_STATE.PIPE[MEM_STAGE] = CURRENT_STATE.PIPE[EX_STAGE];
@@ -573,16 +572,14 @@ void Memory_Stage() {
                 CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
             }
 	    
-	    printf("mem stage ex_mem_alu_out %x\n",CURRENT_STATE.EX_MEM_ALU_OUT);
             CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
 	    printf("cache_read output: %d\n",CURRENT_STATE.MEM_WB_MEM_OUT);
 	    if (CURRENT_STATE.MEM_WB_MEM_OUT==NULL) {
 		CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
 		CURRENT_STATE.MEM_STALL_PC=CURRENT_STATE.EX_MEM_ALU_OUT;
-		return;
+		break;
 	    }
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
-
             break;
         case 0x2b:		//SW
             mem_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE); 

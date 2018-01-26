@@ -98,7 +98,6 @@ uint32_t cache_miss_mem_read_32()
     uint32_t set_index = (CURRENT_STATE.MEM_STALL_PC>>3)&0x1;
     uint32_t tag = CURRENT_STATE.MEM_STALL_PC>>4;
     uint32_t offset = CURRENT_STATE.MEM_STALL_PC&0x7;
-    printf("miss..set_index %x tag %x offset %d\n",set_index, tag, offset);
 
     for (i=0;i<4;i++){
 	if (!Cache_Info[set_index].block[i].valid) {
@@ -107,7 +106,6 @@ uint32_t cache_miss_mem_read_32()
 	    (&(&Cache_Info[set_index])->block[i])->tag=tag;
 	    //Cache_Info[set_index].block[i].LRU=1;
 	    (&(&Cache_Info[set_index])->block[i])->dirty=0;
-	    printf("cache write from memory: %d %d\n",Cache[set_index][i][0], Cache[set_index][i][1]);
 	    return Cache[set_index][i][offset/BYTES_PER_WORD];
 	}
     }
