@@ -88,7 +88,7 @@ uint32_t cache_read_32(uint32_t address)
 
     for (i = 0; i < 4; i++)
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag))
-	    return Cache[set_index][i][offset / BYTES_PER_WORD];
+	    return Cache[set_index][i][offset/BYTES_PER_WORD];
     return 0;
 }
 
@@ -107,7 +107,7 @@ uint32_t cache_miss_mem_read_32()
 	    
 	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
 	    (&(&Cache_Info[set_index])->block[i])->tag = tag;
-	    //Cache_Info[set_index].block[i].LRU=1;
+	    //Cache_Info[set_index].block[i].LRU = 1;
 	    (&(&Cache_Info[set_index])->block[i])->dirty = 0;
 
 	    return Cache[set_index][i][offset/BYTES_PER_WORD];
@@ -117,5 +117,20 @@ uint32_t cache_miss_mem_read_32()
 
 void cache_write_32(uint32_t address, uint32_t value) 
 {
+    uint32_t set_index = (address >> 3) & 0x1;
+    uint32_t tag = address >> 4;
+    uint32_t offset = address & 0x7;
+
+    for (int i = 0; i < 4; i++) {
+	Cache[set_index][i][offset/BYTES_PER_WORD];
+
+	(&(&Cache_Info[set_index])->block[i])->dirty = 1;
+	
+    }
+    
+
+
+
+
 
 }
