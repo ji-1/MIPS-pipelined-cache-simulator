@@ -17,7 +17,8 @@ typedef struct Cache_Block_Info {
     int valid;
     uint32_t tag;
     int dirty;
-    char LRU;
+    struct Cache_Block_Info *next;
+    struct Cache_Block_Info *prev;
 } Block_Info;
 
 
@@ -28,9 +29,8 @@ typedef struct Cache_Info {
 int miss_penalty; // number of cycles to stall when a cache miss occurs
 uint32_t ***Cache; // data cache storing data [set][way][byte]
 Cache_Set_Info *Cache_Info;
-int n_set;
-int n_way;
-int n_byte;
+Block_Info *Info_head[2];
+Block_Info *Info_tail[2];
 void setupCache(int, int, int);
 void setCacheMissPenalty(int);
 uint32_t cache_read_32(uint32_t);

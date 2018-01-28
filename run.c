@@ -132,7 +132,7 @@ void IDecode_Stage() {
 		case 0x2B:	//SLTU
 		case 0x23:	//SUBU
 		    if (CURRENT_STATE.REGS_LOCK[RS(inst)] || CURRENT_STATE.REGS_LOCK[RT(inst)]) {
-			printf("rs %d rt %d  %d\n", CURRENT_STATE.REGS_LOCK[RS(inst)] ,RT(inst),CURRENT_STATE.REGS_LOCK[RT(inst)]);
+			printf("rs %d rt %d  %d\n",RS(inst),RT(inst),CURRENT_STATE.REGS_LOCK[RS(inst)]);
 			printf("addu lock?\n");
 			CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
 			return;
@@ -584,6 +584,7 @@ void Memory_Stage() {
 	    if (CURRENT_STATE.MEM_WB_MEM_OUT == NULL) {
 		CURRENT_STATE.STALL_FOR_DCACHE = TRUE;
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
+		printf("stall pc: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT); 
 		CURRENT_STATE.MEM_STALL_DEST = RT(inst);
 		break;
 	    }
@@ -821,10 +822,11 @@ void Stall_By_Cache_Miss(int* penalty) {
     if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
 	if (!((*penalty)--)) {
 	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
-	   // CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+	    // CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
 	    *penalty=30;
 	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
-		CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+	    CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+	    printf("mem_stall_w_value? %d\n",CURRENT_STATE.MEM_STALL_W_VALUE);
 	    return;
 	}
 	CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;
