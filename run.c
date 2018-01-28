@@ -582,7 +582,7 @@ void Memory_Stage() {
 	    CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
 
 	    if (CURRENT_STATE.MEM_WB_MEM_OUT == NULL) {
-		CURRENT_STATE.STALL_FOR_DCACHE = TRUE;
+		CURRENT_STATE.STALL_FOR_DCACHE = 1;
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
 		printf("stall pc: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT); 
 		CURRENT_STATE.MEM_STALL_DEST = RT(inst);
@@ -592,6 +592,7 @@ void Memory_Stage() {
 	    break;
 	case 0x2b:		//SW
 	    cache_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
+	    printf("alu %x value %x\n" , CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
 	    }
@@ -819,14 +820,18 @@ void Flush_By_Branch() {
 
 void Stall_By_Cache_Miss(int* penalty) {
 
-    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
+    if (CURRENT_STATE.STALL_FOR_DCACHE==1 || CURRENT_STATE.STALL_FOR_DCACHE==2) {
 	if (!((*penalty)--)) {
 	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
 	    // CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
 	    *penalty=30;
+	    if (CURRENT_STATE.STALL_FOR_DCACHE==1) 
+		CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+	    if (CURRENT_STATE.STALL_FOR_DCACHE==2)
+		cache_miss_mem_write_32(CURRENT_STATE.MEM_STALL_PC, CURRENT_STATE.MEM_STALL_W_VALUE) ;
+
+
 	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
-	    CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
-	    printf("mem_stall_w_value? %d\n",CURRENT_STATE.MEM_STALL_W_VALUE);
 	    return;
 	}
 	CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;

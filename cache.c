@@ -91,10 +91,8 @@ uint32_t cache_read_32(uint32_t address)
     for (i = 0; i < 4; i++) {
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
 	    // LRU
-	    printf("cache found!\n");
 	    if (Info_head[set_index] != Info_tail[set_index]) { 
-		if (Info_tail[set_index] == &Cache_Info[set_index]) {
-		    printf("tail read\n");
+		if (Info_tail[set_index] == &Cache_Info[set_index] && Info_head[set_index]!=&Cache_Info[set_index]) {
 		    Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
 		    prev_block->next = NULL;
 		    (&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
@@ -102,9 +100,7 @@ uint32_t cache_read_32(uint32_t address)
 		    head_block->prev = &(Cache_Info[set_index]);
 		    Info_head[set_index]=&(Cache_Info[set_index]);
 		} else {
-		    printf("else read\n");
 		      Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		      printf("prev block valid?? %d\n",prev_block->valid);
 		      Block_Info *next_block = (&(&Cache_Info[set_index])->block[i])->next;
 		      prev_block->next = next_block;
 		      next_block->prev = prev_block;
@@ -138,12 +134,10 @@ uint32_t cache_miss_mem_read_32()
 		Info_head[set_index]=&(Cache_Info[set_index].block[i]);
 		Info_tail[set_index]=&(Cache_Info[set_index].block[i]);
 	    } else  {
-		printf("%d miss..2nd\n",set_index);
 		Block_Info *block = Info_head[set_index];
 		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
 		block->prev = &(Cache_Info[set_index]);    
 		Info_head[set_index]=&(Cache_Info[set_index]);
-		printf("block valid? %d\n",block->valid);
 	    }
 
 	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
@@ -166,10 +160,8 @@ void cache_write_32(uint32_t address, uint32_t value)
 
     for (i = 0; i < 4; i++) {
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
-	    printf("sw hit!!\n");
-	    if (Info_head[set_index] != Info_tail[set_index]) { 
+	    if (Info_head[set_index] != Info_tail[set_index] && Info_head[set_index]!=&Cache_Info[set_index]) { 
 		if (Info_tail[set_index] == &Cache_Info[set_index]) {
-		    printf("tail read\n");
 		    Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
 		    prev_block->next = NULL;
 		    (&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
@@ -177,9 +169,7 @@ void cache_write_32(uint32_t address, uint32_t value)
 		    head_block->prev = &(Cache_Info[set_index]);
 		    Info_head[set_index]=&(Cache_Info[set_index]);
 		} else {
-		    printf("else read\n");
 		      Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		      printf("prev block valid?? %d\n",prev_block->valid);
 		      Block_Info *next_block = (&(&Cache_Info[set_index])->block[i])->next;
 		      prev_block->next = next_block;
 		      next_block->prev = prev_block;
@@ -195,8 +185,9 @@ void cache_write_32(uint32_t address, uint32_t value)
 	    return;
 	}
     }
-    CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
+    CURRENT_STATE.STALL_FOR_DCACHE=2;
     CURRENT_STATE.MEM_STALL_W_VALUE = value;
+    CURRENT_STATE.MEM_STALL_PC = address; 
 }
 
 void cache_miss_mem_write_32(uint32_t address, uint32_t value) {
@@ -209,10 +200,26 @@ void cache_miss_mem_write_32(uint32_t address, uint32_t value) {
     printf("cache miss mem write index %x tag %x offset %x\n",set_index, tag,offset);
     for (i = 0; i < 4; i++){
 	if (!Cache_Info[set_index].block[i].valid) {
-	    
 	
-	}
-    }
+	    mem_read_block(CURRENT_STATE.MEM_STALL_PC, Cache[set_index][i]);
 
+	    // LRU
+	    if (Info_head[set_index]==NULL) {
+		Info_head[set_index]=&(Cache_Info[set_index].block[i]);
+		Info_tail[set_index]=&(Cache_Info[set_index].block[i]);
+	    } else  {
+		Block_Info *block = Info_head[set_index];
+		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
+		block->prev = &(Cache_Info[set_index]);    
+		Info_head[set_index]=&(Cache_Info[set_index]);
+	    }
+
+	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
+	    (&(&Cache_Info[set_index])->block[i])->tag = tag;
+	    (&(&Cache_Info[set_index])->block[i])->dirty = 1;
+
+	    Cache[set_index][i][offset/BYTES_PER_WORD]=value;
+	}	
+    }
 }
 
