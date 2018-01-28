@@ -81,6 +81,7 @@ uint32_t cache_read_32(uint32_t address)
     uint32_t set_index = (address >> 3) & 0x1;
     uint32_t tag = address >> 4;
     uint32_t offset = address & 0x7;
+    printf("cache read index %x tag %x offset %x\n",set_index, tag,offset);
 
     for (i = 0; i < 4; i++)
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag))
@@ -113,20 +114,38 @@ uint32_t cache_miss_mem_read_32()
 
 void cache_write_32(uint32_t address, uint32_t value)
 {
+    int i;
     uint32_t set_index = (address >> 3) & 0x1;
     uint32_t tag = address >> 4;
     uint32_t offset = address & 0x7;
+    printf("cache write index %x tag %x offset %x\n",set_index, tag,offset);
 
-    for (int i = 0; i < 4; i++) {
-	Cache[set_index][i][offset/BYTES_PER_WORD];
-
-	(&(&Cache_Info[set_index])->block[i])->dirty = 1;
-
+    for (i = 0; i < 4; i++) {
+	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
+	    Cache[set_index][i][offset/BYTES_PER_WORD]=value;
+	    (&(&Cache_Info[set_index])->block[i])->dirty = 1;
+	    return;
+	}
     }
+    CURRENT_STATE.STALL_FOR_DCACHE=TRUE;
+    for (i = 0; i < 4; i++){
+	if (!Cache_Info[set_index].block[i].valid) {
 
+	    mem_read_block(address, Cache[set_index][i]);
 
+	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
+	    (&(&Cache_Info[set_index])->block[i])->tag = tag;
+	    //Cache_Info[set_index].block[i].LRU = 1;
+	    (&(&Cache_Info[set_index])->block[i])->dirty = 0;
 
+	    printf("cache miss read! %d\n",Cache[set_index][i][offset/BYTES_PER_WORD]);
+	    Cache[set_index][i][offset/BYTES_PER_WORD]=value;
+	    return;
+	}
+    }
+}
 
+void cache_miss_mem_write_32() {
 
 
 }
