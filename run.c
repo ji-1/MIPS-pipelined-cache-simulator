@@ -1,4 +1,4 @@
-/***************************************************************/
+
 /*                                                             */
 /*   MIPS-32 Instruction Level Simulator                       */
 /*                                                             */
@@ -32,6 +32,10 @@ instruction* get_inst_info(uint32_t pc) {
 /*                                                             */
 /***************************************************************/
 void IFetch_Stage() {
+
+    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
+	return;
+    }
     if (FETCH_BIT == FALSE/* || CURRENT_STATE.PIPE_STALL[IF_STAGE] == TRUE*/) {
         //FOR DEBUG
         //printf("fetch bit: %d, if stage stall bit: %d\n", FETCH_BIT, CURRENT_STATE.PIPE_STALL[IF_STAGE]);
@@ -60,7 +64,6 @@ void IFetch_Stage() {
     } else { /** ID Stage is stalled */
         CURRENT_STATE.PIPE_STALL[IF_STAGE] = TRUE;
         CURRENT_STATE.IF_PC = CURRENT_STATE.PC;
-	CURRENT_STATE.PIPE_STALL[ID_STAGE] = FALSE;
     }
 }
 
@@ -74,13 +77,14 @@ void IFetch_Stage() {
 void IDecode_Stage() {
     instruction *inst;
 
-    if (!(FETCH_BIT == FALSE && CURRENT_STATE.PIPE_STALL[ID_STAGE] == TRUE)) {
-	if (CURRENT_STATE.PIPE_STALL[ID_STAGE]==TRUE) {
-	    return;
-	}
-	CURRENT_STATE.PIPE[ID_STAGE] = CURRENT_STATE.IF_ID_INST;
+    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
+	return;
     }
-   
+
+      if (!(FETCH_BIT == FALSE && CURRENT_STATE.PIPE_STALL[ID_STAGE] == TRUE)) {
+  	     CURRENT_STATE.PIPE[ID_STAGE] = CURRENT_STATE.IF_ID_INST;
+      }
+
     if (CURRENT_STATE.PIPE[ID_STAGE] == 0) {
         return;
     }
@@ -128,7 +132,8 @@ void IDecode_Stage() {
                 case 0x2B:	//SLTU
                 case 0x23:	//SUBU
                     if (CURRENT_STATE.REGS_LOCK[RS(inst)] || CURRENT_STATE.REGS_LOCK[RT(inst)]) {
-			//printf("addu lock?\n");
+			printf("rs %d rt %d  %d\n", CURRENT_STATE.REGS_LOCK[RS(inst)] ,RT(inst),CURRENT_STATE.REGS_LOCK[RT(inst)]);
+			printf("addu lock?\n");
                         CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
                         return;
                     }
@@ -160,19 +165,19 @@ void IDecode_Stage() {
     }
 
     if (CURRENT_STATE.PIPE_STALL[ID_STAGE] == FALSE) {
-        CURRENT_STATE.ID_EX_DEST = MIPS_REGS;	
+        CURRENT_STATE.ID_EX_DEST = MIPS_REGS;
 
         switch (OPCODE(inst)) {
             case 0x9:		//ADDIU
             case 0xc:		//ANDI
             case 0xd:		//ORI
-            case 0xb:		//SLTIU 
+            case 0xb:		//SLTIU
                 CURRENT_STATE.REGS_LOCK[RT(inst)]++;			//Lock dest register
                 CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.REGS[RS(inst)];
                 CURRENT_STATE.ID_EX_IMM = IMM(inst);
                 CURRENT_STATE.ID_EX_DEST = RT(inst);
                 break;
-            case 0xf:		//LUI	
+            case 0xf:		//LUI
                 CURRENT_STATE.REGS_LOCK[RT(inst)]++;			//Lock dest register
                 CURRENT_STATE.ID_EX_IMM = IMM(inst);
                 CURRENT_STATE.ID_EX_DEST = RT(inst);
@@ -252,23 +257,22 @@ void Execute_Stage() {
     instruction *inst;
 
 //    printf("IF STALL: %d MEM STALL: %d \n", CURRENT_STATE.PIPE_STALL[IF_STAGE], CURRENT_STATE.PIPE_STALL[MEM_STAGE]);
-
-    if (CURRENT_STATE.PIPE_STALL[ID_STAGE] == FALSE) {
-	CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
-    }
-    
-    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE] == FALSE && CURRENT_STATE.PIPE_STALL[IF_STAGE] == TRUE) {	
-        CURRENT_STATE.PIPE[EX_STAGE] = 0;
-    } 
-
-    if (CURRENT_STATE.PIPE_STALL[EX_STAGE] == TRUE) {
+    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
 	return;
     }
-    if (CURRENT_STATE.PIPE[EX_STAGE] == 0) {
-        CURRENT_STATE.EX_MEM_DEST = 0;
-        CURRENT_STATE.EX_MEM_ALU_OUT = 0;
-        return;
-    }
+
+
+      if (CURRENT_STATE.PIPE_STALL[ID_STAGE] == FALSE) {
+  	     CURRENT_STATE.PIPE[EX_STAGE] = CURRENT_STATE.PIPE[ID_STAGE];
+      } else {
+        CURRENT_STATE.PIPE[EX_STAGE] = 0;
+      }
+
+      if (CURRENT_STATE.PIPE[EX_STAGE] == 0) {
+          CURRENT_STATE.EX_MEM_DEST = 0;
+          CURRENT_STATE.EX_MEM_ALU_OUT = 0;
+          return;
+      }
 
     inst = get_inst_info(CURRENT_STATE.PIPE[EX_STAGE]);
 
@@ -281,7 +285,7 @@ void Execute_Stage() {
             case 0x9:		//ADDIU
             case 0xc:		//ANDI
             case 0xd:		//ORI
-            case 0xb:		//SLTIU 
+            case 0xb:		//SLTIU
                 CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
                 if (RS(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
                     CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.MEM_WB_FORWARD_VALUE;
@@ -303,7 +307,7 @@ void Execute_Stage() {
             case 0x2b:		//SW
                 if (BASE(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
                     CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.MEM_WB_FORWARD_VALUE;
-                } 
+                }
                 if (BASE(inst) == CURRENT_STATE.EX_MEM_FORWARD_REG) {
                     CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.EX_MEM_FORWARD_VALUE;
                 }
@@ -402,18 +406,18 @@ void Execute_Stage() {
 
     switch (OPCODE(inst)) {
         case 0x9:		//ADDIU
-            CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;	
+            CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
             break;
         case 0xc:		//ANDI
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 & (0xffff & CURRENT_STATE.ID_EX_IMM);
             break;
-        case 0xf:		//LUI	
+        case 0xf:		//LUI
             CURRENT_STATE.EX_MEM_ALU_OUT = (CURRENT_STATE.ID_EX_IMM << 16) & 0xffff0000;
             break;
         case 0xd:		//ORI
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 | (0xffff & CURRENT_STATE.ID_EX_IMM);
             break;
-        case 0xb:		//SLTIU 
+        case 0xb:		//SLTIU
             {
                 int x = (short)CURRENT_STATE.ID_EX_IMM;
 
@@ -424,7 +428,7 @@ void Execute_Stage() {
                 }
                 break;
             }
-        case 0x23:		//LW	
+        case 0x23:		//LW
             CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
 	    //printf("EX stage:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
             break;
@@ -508,7 +512,7 @@ void Execute_Stage() {
                 case 0x8:	//JR
                     Flush_By_Jump();
                     CURRENT_STATE.PC = CURRENT_STATE.ID_EX_REG1;
-                    break;	
+                    break;
                 default:
                     printf("Unknown function code type: 0x%x\n", FUNC(inst));
                     break;
@@ -529,6 +533,7 @@ void Execute_Stage() {
     }
     CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.ID_EX_NPC;
     CURRENT_STATE.EX_MEM_DEST = CURRENT_STATE.ID_EX_DEST;
+
 }
 
 /***************************************************************/
@@ -541,8 +546,8 @@ void Execute_Stage() {
 void Memory_Stage() {
     instruction *inst;
 
-    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==TRUE) {
-	return;
+    if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]== TRUE) {
+      return;
     }
     if (FORWARDING_BIT == TRUE) {
         CURRENT_STATE.MEM_WB_FORWARD_REG = CURRENT_STATE.MEM_WB_DEST;
@@ -571,22 +576,21 @@ void Memory_Stage() {
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.EX_MEM_ALU_OUT;
             break;
         case 0x23:		//LW
-            if (FORWARDING_BIT == TRUE) {
-                CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
-            }
-    
-            CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
-	    //printf("cache_read output: %d\n", CURRENT_STATE.MEM_WB_MEM_OUT);
-	    
-	    if (CURRENT_STATE.MEM_WB_MEM_OUT == 0) {
+	    CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
+
+	    if (CURRENT_STATE.MEM_WB_MEM_OUT == NULL) {
 		CURRENT_STATE.STALL_FOR_DCACHE = TRUE;
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
+		CURRENT_STATE.MEM_STALL_DEST = RT(inst);
 		break;
 	    }
+	    if (FORWARDING_BIT == TRUE) {
+		CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
+            }
             CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
             break;
         case 0x2b:		//SW
-            mem_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE); 
+            mem_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
             break;
         case 0x4:		//BEQ
         case 0x5:		//BNE
@@ -637,9 +641,9 @@ void WriteBack_Stage() {
     instruction *inst;
 
     if (CURRENT_STATE.PIPE_STALL[MEM_STAGE]==FALSE) {
-    CURRENT_STATE.PIPE[WB_STAGE] = CURRENT_STATE.PIPE[MEM_STAGE];
+      CURRENT_STATE.PIPE[WB_STAGE] = CURRENT_STATE.PIPE[MEM_STAGE];
     } else {
-	CURRENT_STATE.PIPE[WB_STAGE]=0;
+	     CURRENT_STATE.PIPE[WB_STAGE]=0;
     }
     if (CURRENT_STATE.PIPE[WB_STAGE] == 0) {
         return;
@@ -658,7 +662,7 @@ void WriteBack_Stage() {
                 CURRENT_STATE.REGS_LOCK[RT(inst)]--;
             }
             break;
-        case 0x23:		//LW	
+        case 0x23:		//LW
             CURRENT_STATE.REGS[RT(inst)] = CURRENT_STATE.MEM_WB_MEM_OUT;
             if (!FORWARDING_BIT) {
                 CURRENT_STATE.REGS_LOCK[RT(inst)]--;
@@ -810,27 +814,20 @@ void Flush_By_Branch() {
 }
 
 void Stall_By_Cache_Miss(int* penalty) {
-    
-    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
-	if (!((*penalty)--)) {
-	    CURRENT_STATE.PIPE_STALL[IF_STAGE] = FALSE;
-	    CURRENT_STATE.PIPE_STALL[ID_STAGE] = FALSE;
-	    CURRENT_STATE.PIPE_STALL[EX_STAGE] = FALSE;
-	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
 
-	    CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
-	    
-	    //printf("cache_miss: %d\n", CURRENT_STATE.MEM_WB_MEM_OUT);
-	    
-	    *penalty=30;
-	    
-	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
-	    return;
-	}
-	CURRENT_STATE.PIPE_STALL[IF_STAGE] = TRUE;
-	CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
-	CURRENT_STATE.PIPE_STALL[EX_STAGE] = TRUE;
-	CURRENT_STATE.PIPE_STALL[MEM_STAGE] = TRUE;
+    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
+      if (!((*penalty)--)) {
+  	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
+  	    CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+  	    //printf("cache_miss: %d\n", CURRENT_STATE.MEM_WB_MEM_OUT);
+  	    *penalty=30;
+ if (FORWARDING_BIT == TRUE) {
+		CURRENT_STATE.REGS_LOCK[CURRENT_STATE.MEM_STALL_DEST] = FALSE;			//Unlock dest register
+            }
+ 	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
+  	    return;
+	     }
+              CURRENT_STATE.PIPE_STALL[MEM_STAGE]=TRUE;
     }
 }
 
