@@ -289,6 +289,7 @@ void Execute_Stage() {
 		CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
 		if (RS(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
 		    CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.MEM_WB_FORWARD_VALUE;
+		    printf("addiu mem_wb forward %x\n", CURRENT_STATE.ID_EX_REG1);
 		}
 		if (RS(inst) == CURRENT_STATE.EX_MEM_FORWARD_REG) {
 		    CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.EX_MEM_FORWARD_VALUE;
@@ -407,7 +408,7 @@ void Execute_Stage() {
     switch (OPCODE(inst)) {
 	case 0x9:		//ADDIU
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    printf("addiu: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT);
+	    printf("addiu: %x %x %d\n",CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
 	    break;
 	case 0xc:		//ANDI
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 & (0xffff & CURRENT_STATE.ID_EX_IMM);
@@ -827,6 +828,7 @@ void Stall_By_Cache_Miss(int* penalty) {
 	    *penalty=30;
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==1)  {
 		CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
+		CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.MEM_WB_MEM_OUT;
 	    }
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==2){ 
 		cache_miss_mem_write_32(CURRENT_STATE.MEM_STALL_PC, CURRENT_STATE.MEM_STALL_W_VALUE) ;

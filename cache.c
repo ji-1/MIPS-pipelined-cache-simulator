@@ -143,7 +143,7 @@ void cache_write_32(uint32_t address, uint32_t value)
     uint32_t set_index = (address >> 3) & 0x1;
     uint32_t tag = address >> 4;
     uint32_t offset = address & 0x7;
-    printf("cache write address %x index %x tag %x offset %x\n",address, set_index, tag,offset);
+    printf("cache write address %x index %x tag %x offset %x value: %x\n",address, set_index, tag,offset, value);
 
     for (i = 0; i < 4; i++) {
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
@@ -168,7 +168,7 @@ void cache_miss_mem_write_32(uint32_t address, uint32_t value) {
     uint32_t tag = address >> 4;
     uint32_t offset = address & 0x7;
 
-    printf("cache miss mem write index %x tag %x offset %x\n",set_index, tag,offset);
+    printf("cache miss write address %x index %x tag %x offset %x value: %x\n",address, set_index, tag,offset, value);
     for (i = 0; i < 4; i++){
 	if (!Cache_Info[set_index].block[i].valid) {
 
@@ -196,6 +196,7 @@ void cache_miss_mem_write_32(uint32_t address, uint32_t value) {
     }
     if ((Cache_Info[set_index].block[victim]).dirty == 1) {
 	// mem write
+	printf("sw evict!\n");
 	mem_write_block((Cache_Info[set_index].block[victim]).addr, Cache[set_index][victim]);
     }
     (Cache_Info[set_index].block[victim]).valid=0;
@@ -209,7 +210,6 @@ void cache_flush() {
 	for (j=0;j<4;j++) {
 	    if ((Cache_Info[i].block[j]).dirty == 1) {
 		mem_write_block((Cache_Info[i].block[j]).addr, Cache[i][j]);
-	    
 	    }
 	}
     }
