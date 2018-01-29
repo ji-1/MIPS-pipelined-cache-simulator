@@ -16,23 +16,21 @@
 typedef struct Cache_Block_Info {
     int valid;
     uint32_t tag;
+    uint32_t addr;
     int dirty;
-    struct Cache_Block_Info *next;
-    struct Cache_Block_Info *prev;
+    int time;
 } Block_Info;
 
 
 typedef struct Cache_Info {
     Block_Info* block;
 } Cache_Set_Info;
-
+int timer;
 int miss_penalty; // number of cycles to stall when a cache miss occurs
 uint32_t ***Cache; // data cache storing data [set][way][byte]
 Cache_Set_Info *Cache_Info;
-Block_Info *Info_head[2];
-Block_Info *Info_tail[2];
 void setupCache(int, int, int);
 void setCacheMissPenalty(int);
 uint32_t cache_read_32(uint32_t);
 void cache_write_32(uint32_t, uint32_t);
-
+void cache_flush();

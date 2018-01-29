@@ -45,24 +45,20 @@ void setupCache(int capacity, int num_way, int block_size)
 	}
     }
 
-    Cache_Info = (Cache_Set_Info *)malloc(nset * sizeof(Cache_Set_Info*));
+    Cache_Info = (Cache_Set_Info *)malloc(nset * sizeof(Cache_Set_Info));
 
     for (i = 0; i < nset; i++) {
-	Cache_Info[i].block = (Block_Info *)malloc(num_way * sizeof(Block_Info*));
+	Cache_Info[i].block = (Block_Info *)malloc(num_way * sizeof(Block_Info));
     }
 
     for(i = 0; i < nset; i++) {
 	for (j = 0; j < num_way; j++) {
-	    //(Cache_Info[i].block[j]).valid=0;
-	    (&(&Cache_Info[i])->block[i])->valid = 0;
+	    (Cache_Info[i].block[j]).valid=0;
+//	    (&(&Cache_Info[i])->block[i])->valid = 0;
 	}
     }
-    //for (i=0;i<4;i++)
-//	printf("cache initialization: %d\n",Cache_Info[0].block[i].valid);
-    for (i = 0; i < nset; i++) {
-	Info_head[i] = NULL;
-	Info_tail[i] = NULL;
-    }
+  //  for (i=0;i<4;i++)
+    //	printf("cache initialization: %d\n",Cache_Info[0].block[i].valid);
 }
 
 /***************************************************************/
@@ -93,33 +89,7 @@ uint32_t cache_read_32(uint32_t address)
     for (i = 0; i < 4; i++) {
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
 	    // LRU
-	    if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
-
-		if (Info_head[set_index] != Info_tail[set_index]) {
-
-		} else if (Info_head[set_index]!=&Cache_Info[set_index]) { 
-
-		} else if (Info_tail[set_index] == &Cache_Info[set_index]) {
-
-		    Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		    prev_block->next = NULL;
-		    (&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		    Block_Info *head_block = Info_head[set_index];
-		    head_block->prev = &(Cache_Info[set_index]);
-		    Info_head[set_index]=&(Cache_Info[set_index]);
-		} else {
-		    Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		    Block_Info *next_block = (&(&Cache_Info[set_index])->block[i])->next;
-		    prev_block->next = next_block;
-		    next_block->prev = prev_block;
-
-		    Block_Info *head_block = Info_head[set_index];
-		    head_block->prev = &(Cache_Info[set_index]);
-		    (&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		    Info_head[set_index]=&(Cache_Info[set_index]); 
-		}
-	    }
-	    printf("cache read: %d\n",Cache[set_index][i][offset/BYTES_PER_WORD]);
+	    (Cache_Info[set_index].block[i]).time=timer;
 	    return Cache[set_index][i][offset/BYTES_PER_WORD];
 	}
     }
@@ -135,35 +105,36 @@ uint32_t cache_miss_mem_read_32()
     uint32_t tag = CURRENT_STATE.MEM_STALL_PC >> 4;
     uint32_t offset = CURRENT_STATE.MEM_STALL_PC & 0x7;
 
-    printf("cache lw miss %x block!\n", CURRENT_STATE.MEM_STALL_PC);
     for (i = 0; i < 4; i++){
-	printf("lw valid: %d %d\n", i,Cache_Info[set_index].block[i].valid); 
 	if (Cache_Info[set_index].block[i].valid == FALSE) {
-	    printf("cache miss free block found!\n");
-
 	    mem_read_block(CURRENT_STATE.MEM_STALL_PC, Cache[set_index][i]);
-
 	    // LRU
-	    if (Info_head[set_index]==NULL) {
-		Info_head[set_index]=&(Cache_Info[set_index].block[i]);
-		Info_tail[set_index]=&(Cache_Info[set_index].block[i]);
-	    } else  {
-		Block_Info *block = Info_head[set_index];
-		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		block->prev = &(Cache_Info[set_index]);    
-		Info_head[set_index]=&(Cache_Info[set_index]);
-	    }
-
-	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
-	printf("lw record way %d  valid %d\n", i,Cache_Info[set_index].block[i].valid); 
-	    (&(&Cache_Info[set_index])->block[i])->tag = tag;
-	    (&(&Cache_Info[set_index])->block[i])->dirty = 0;
-
+	    (Cache_Info[set_index].block[i]).addr=CURRENT_STATE.MEM_STALL_PC;
+	    (Cache_Info[set_index].block[i]).time=timer;
+	    (Cache_Info[set_index].block[i]).valid=1;
+	    (Cache_Info[set_index].block[i]).tag=tag;
+	    (Cache_Info[set_index].block[i]).dirty=0;
 
 	    return Cache[set_index][i][offset/BYTES_PER_WORD];
 	}
     }
     // no free block left. LRU evict
+    int victim = 0;
+    int victim_t=Cache_Info[set_index].block[0].time;
+    for (i=1;i<4;i++) {
+	if (victim_t > (Cache_Info[set_index].block[i]).time) {
+	    victim_t = (Cache_Info[set_index].block[i]).time;
+	    victim=i;
+	}
+    }
+    
+    if ((Cache_Info[set_index].block[victim]).dirty == 1) {
+	// mem write
+	mem_write_block((Cache_Info[set_index].block[victim]).addr, Cache[set_index][victim]);
+    }
+
+    (Cache_Info[set_index].block[victim]).valid=0;
+    return cache_miss_mem_read_32();
 }
 
 void cache_write_32(uint32_t address, uint32_t value)
@@ -177,37 +148,14 @@ void cache_write_32(uint32_t address, uint32_t value)
     for (i = 0; i < 4; i++) {
 	if (Cache_Info[set_index].block[i].valid && (Cache_Info[set_index].block[i].tag == tag)) {
 
-	    if (Info_head[set_index] != Info_tail[set_index]) {
-
-	    } else if (Info_head[set_index]!=&Cache_Info[set_index]) { 
-
-	    } else if (Info_tail[set_index] == &Cache_Info[set_index]) {
-		Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		prev_block->next = NULL;
-		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		Block_Info *head_block = Info_head[set_index];
-		head_block->prev = &(Cache_Info[set_index]);
-		Info_head[set_index]=&(Cache_Info[set_index]);
-	    } else {
-		Block_Info *prev_block = &((&(&Cache_Info[set_index])->block[i])->prev);
-		Block_Info *next_block = (&(&Cache_Info[set_index])->block[i])->next;
-		prev_block->next = next_block;
-		next_block->prev = prev_block;
-
-		Block_Info *head_block = Info_head[set_index];
-		head_block->prev = &(Cache_Info[set_index]);
-		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		Info_head[set_index]=&(Cache_Info[set_index]); 
-	    }
+	    (Cache_Info[set_index].block[i]).time=timer;
 	    Cache[set_index][i][offset/BYTES_PER_WORD]=value;
-	    printf("cache write: %d\n",Cache[set_index][i][offset/BYTES_PER_WORD]);
-	    (&(&Cache_Info[set_index])->block[i])->dirty = 1;
+	    (Cache_Info[set_index].block[i]).dirty=1;
 	    return;
 
 	}
     }
 
-    printf("sw cache X found\n");
     CURRENT_STATE.STALL_FOR_DCACHE=2;
     CURRENT_STATE.MEM_STALL_W_VALUE = value;
     CURRENT_STATE.MEM_STALL_PC = address; 
@@ -227,22 +175,42 @@ void cache_miss_mem_write_32(uint32_t address, uint32_t value) {
 	    mem_read_block(CURRENT_STATE.MEM_STALL_PC, Cache[set_index][i]);
 
 	    // LRU
-	    if (Info_head[set_index]==NULL) {
-		Info_head[set_index]=&(Cache_Info[set_index].block[i]);
-		Info_tail[set_index]=&(Cache_Info[set_index].block[i]);
-	    } else  {
-		Block_Info *block = Info_head[set_index];
-		(&(&Cache_Info[set_index])->block[i])->next = Info_head[set_index];
-		block->prev = &(Cache_Info[set_index]);    
-		Info_head[set_index]=&(Cache_Info[set_index]);
-	    }
-
-	    (&(&Cache_Info[set_index])->block[i])->valid = 1;
-	    (&(&Cache_Info[set_index])->block[i])->tag = tag;
-	    (&(&Cache_Info[set_index])->block[i])->dirty = 1;
+	    (Cache_Info[set_index].block[i]).time=timer;
+	    (Cache_Info[set_index].block[i]).valid=1;
+	    (Cache_Info[set_index].block[i]).addr=CURRENT_STATE.MEM_STALL_PC;
+	    (Cache_Info[set_index].block[i]).tag=tag;
+	    (Cache_Info[set_index].block[i]).dirty=1;
 
 	    Cache[set_index][i][offset/BYTES_PER_WORD]=value;
+	    return;
 	}	
     }
+    // LRU
+    int victim = 0;
+    int victim_t=Cache_Info[set_index].block[0].time;
+    for (i=1;i<4;i++) {
+	if (victim_t > (Cache_Info[set_index].block[i]).time) {
+	    victim_t = (Cache_Info[set_index].block[i]).time;
+	    victim=i;
+	}
+    }
+    if ((Cache_Info[set_index].block[victim]).dirty == 1) {
+	// mem write
+	mem_write_block((Cache_Info[set_index].block[victim]).addr, Cache[set_index][victim]);
+    }
+    (Cache_Info[set_index].block[victim]).valid=0;
+    return cache_miss_mem_write_32(address, value);
+
 }
 
+void cache_flush() {
+    int i,j;
+    for (i=0;i<2;i++) {
+	for (j=0;j<4;j++) {
+	    if ((Cache_Info[i].block[j]).dirty == 1) {
+		mem_write_block((Cache_Info[i].block[j]).addr, Cache[i][j]);
+	    
+	    }
+	}
+    }
+}

@@ -820,18 +820,15 @@ void Flush_By_Branch() {
 
 void Stall_By_Cache_Miss(int* penalty) {
 
-    printf("stall by cache miss call...%d\n",CURRENT_STATE.STALL_FOR_DCACHE);
     if (CURRENT_STATE.STALL_FOR_DCACHE==1 || CURRENT_STATE.STALL_FOR_DCACHE==2) {
 	if (!((*penalty)--)) {
 	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
 	    // CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
 	    *penalty=30;
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==1)  {
-		printf("lw miss 30 cycle\n");
 		CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
 	    }
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==2){ 
-		printf("sw miss 30 cycle\n");
 		cache_miss_mem_write_32(CURRENT_STATE.MEM_STALL_PC, CURRENT_STATE.MEM_STALL_W_VALUE) ;
 	    }
 
@@ -856,6 +853,7 @@ void process_instruction() {
     IDecode_Stage();
     IFetch_Stage();
 
+    timer++;
     Stall_By_Cache_Miss(&miss_penalty);
     Choose_PC();
 
@@ -865,5 +863,6 @@ void process_instruction() {
 	    CURRENT_STATE.PIPE[EX_STAGE] == 0 &&
 	    CURRENT_STATE.PIPE[MEM_STAGE] == 0) {
 	RUN_BIT = FALSE;
+    cache_flush();
     }
 }
