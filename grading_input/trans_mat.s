@@ -130,7 +130,7 @@ dstmat:	.word	0
 		.text
 main:
 	la	$5, srcmat 
-	la	$6, desmat 
+	la	$6, dstmat
 	ori	$7, $7, 8
 	addiu	$8, $7, -1
 outer1:	

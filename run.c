@@ -132,8 +132,8 @@ void IDecode_Stage() {
 		case 0x2B:	//SLTU
 		case 0x23:	//SUBU
 		    if (CURRENT_STATE.REGS_LOCK[RS(inst)] || CURRENT_STATE.REGS_LOCK[RT(inst)]) {
-			printf("rs %d rt %d  %d\n",RS(inst),RT(inst),CURRENT_STATE.REGS_LOCK[RS(inst)]);
-			printf("addu lock?\n");
+			//printf("rs %d rt %d  %d\n",RS(inst),RT(inst),CURRENT_STATE.REGS_LOCK[RS(inst)]);
+			//printf("addu lock?\n");
 			CURRENT_STATE.PIPE_STALL[ID_STAGE] = TRUE;
 			return;
 		    }
@@ -152,7 +152,7 @@ void IDecode_Stage() {
 		    }
 		    break;
 		default:
-		    printf("Unknown function code type: 0x%x\n", FUNC(inst));
+		    //printf("Unknown function code type: 0x%x\n", FUNC(inst));
 		    break;
 	    }
 	    break;
@@ -289,7 +289,7 @@ void Execute_Stage() {
 		CURRENT_STATE.REGS_LOCK[RT(inst)] = FALSE;			//Unlock dest register
 		if (RS(inst) == CURRENT_STATE.MEM_WB_FORWARD_REG) {
 		    CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.MEM_WB_FORWARD_VALUE;
-		    printf("addiu mem_wb forward %x\n", CURRENT_STATE.ID_EX_REG1);
+		    //printf("addiu mem_wb forward %x\n", CURRENT_STATE.ID_EX_REG1);
 		}
 		if (RS(inst) == CURRENT_STATE.EX_MEM_FORWARD_REG) {
 		    CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.EX_MEM_FORWARD_VALUE;
@@ -408,7 +408,7 @@ void Execute_Stage() {
     switch (OPCODE(inst)) {
 	case 0x9:		//ADDIU
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    printf("addiu: %x %x %d\n",CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
+	    //printf("addiu: %x %x %d\n",CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
 	    break;
 	case 0xc:		//ANDI
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 & (0xffff & CURRENT_STATE.ID_EX_IMM);
@@ -432,7 +432,7 @@ void Execute_Stage() {
 	    }
 	case 0x23:		//LW
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    printf("EX stage lw:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
+	    //printf("EX stage lw:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
 	    break;
 	case 0x2b:		//SW
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
@@ -593,7 +593,7 @@ void Memory_Stage() {
 	    break;
 	case 0x2b:		//SW
 	    cache_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
-	    printf("alu %x value %x\n" , CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
+	    //printf("alu %x value %x\n" , CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
 	    if (CURRENT_STATE.STALL_FOR_DCACHE==2) {
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
 	    }
