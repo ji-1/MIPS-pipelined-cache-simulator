@@ -407,6 +407,7 @@ void Execute_Stage() {
     switch (OPCODE(inst)) {
 	case 0x9:		//ADDIU
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
+	    printf("addiu: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT);
 	    break;
 	case 0xc:		//ANDI
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 & (0xffff & CURRENT_STATE.ID_EX_IMM);
@@ -430,7 +431,7 @@ void Execute_Stage() {
 	    }
 	case 0x23:		//LW
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
-	    //printf("EX stage:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
+	    printf("EX stage lw:: read id_Ex_reg1 %x imm %d\n",CURRENT_STATE.ID_EX_REG1, CURRENT_STATE.ID_EX_IMM);
 	    break;
 	case 0x2b:		//SW
 	    CURRENT_STATE.EX_MEM_ALU_OUT = CURRENT_STATE.ID_EX_REG1 + CURRENT_STATE.ID_EX_IMM;
@@ -581,10 +582,9 @@ void Memory_Stage() {
 	    }
 	    CURRENT_STATE.MEM_WB_MEM_OUT = cache_read_32(CURRENT_STATE.EX_MEM_ALU_OUT) & 0xffffffff;
 
-	    if (CURRENT_STATE.MEM_WB_MEM_OUT == NULL) {
-		CURRENT_STATE.STALL_FOR_DCACHE = 1;
-		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
-		printf("stall pc: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT); 
+	    if (CURRENT_STATE.STALL_FOR_DCACHE == 1) {
+		//CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
+		//printf("stall pc: %x\n",CURRENT_STATE.EX_MEM_ALU_OUT); 
 		CURRENT_STATE.MEM_STALL_DEST = RT(inst);
 		break;
 	    }
@@ -593,7 +593,7 @@ void Memory_Stage() {
 	case 0x2b:		//SW
 	    cache_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
 	    printf("alu %x value %x\n" , CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
-	    if (CURRENT_STATE.STALL_FOR_DCACHE==TRUE) {
+	    if (CURRENT_STATE.STALL_FOR_DCACHE==2) {
 		CURRENT_STATE.MEM_STALL_PC = CURRENT_STATE.EX_MEM_ALU_OUT;
 	    }
 	    break;
@@ -820,16 +820,20 @@ void Flush_By_Branch() {
 
 void Stall_By_Cache_Miss(int* penalty) {
 
+    printf("stall by cache miss call...%d\n",CURRENT_STATE.STALL_FOR_DCACHE);
     if (CURRENT_STATE.STALL_FOR_DCACHE==1 || CURRENT_STATE.STALL_FOR_DCACHE==2) {
 	if (!((*penalty)--)) {
 	    CURRENT_STATE.PIPE_STALL[MEM_STAGE] = FALSE;
 	    // CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
 	    *penalty=30;
-	    if (CURRENT_STATE.STALL_FOR_DCACHE==1) 
+	    if (CURRENT_STATE.STALL_FOR_DCACHE==1)  {
+		printf("lw miss 30 cycle\n");
 		CURRENT_STATE.MEM_WB_MEM_OUT = (cache_miss_mem_read_32() & 0xfffffff);
-	    if (CURRENT_STATE.STALL_FOR_DCACHE==2)
+	    }
+	    if (CURRENT_STATE.STALL_FOR_DCACHE==2){ 
+		printf("sw miss 30 cycle\n");
 		cache_miss_mem_write_32(CURRENT_STATE.MEM_STALL_PC, CURRENT_STATE.MEM_STALL_W_VALUE) ;
-
+	    }
 
 	    CURRENT_STATE.STALL_FOR_DCACHE = FALSE;
 	    return;
